@@ -2,6 +2,8 @@ class hparrayiter:
     def __init__(self, array):
         self._array = array
         self._index = 0
+    def __iter__(self):
+        return self
     def __next__(self):
         if self._index < self._array.shape[0]:
             result = self._array.array[self._index]
@@ -34,9 +36,9 @@ class hparray:
                         self.array[idx] = hparray(array=i,shape=self.shape[1:])
                     else:
                         self.array[idx] = i
+        self.ndim = len(self.shape)
 
     def __getitem__(self, i):
-        print(i)
         if isinstance(i,slice):
             step = i.step
             if step == None:
@@ -64,7 +66,29 @@ class hparray:
             return hparray(array = out,shape = new_shape,override=True)
         elif isinstance(i,tuple):
             if any(isinstance(x,slice) for x in i):
-                raise Exception("NOT IMPLEMENTED")
+                current = self
+                sliced = False
+                for j in i:
+                    if not sliced:
+                        current = current.__getitem__(j)
+                        if isinstance(j,slice):
+                            sliced = True
+                    else:
+                        # THIS IS STUPID CAUSE IT USES LISTS
+                        # PLEASE FIX IDIOT
+                        if j == None:
+                            j = 0
+                        temp = current
+                        def traverse(temp):
+                            if temp.ndim == 1:
+                                return temp.array[j]
+                            else:
+                                out = []
+                                for i in range(temp.shape[0]):
+                                    out.append(traverse(temp.array[i]))
+                                return out
+                        return hparray(array = traverse(temp))
+                return current
             else:
                 new_shape = (len(i),) + self.shape[1:]
                 out = {}
@@ -132,6 +156,5 @@ class hparray:
         return self
 
 
-test = hparray([1,2,3])
-test2 = hparray([[1,1,1],[2,2,2],[3,3,3]])
-print(hparray([test]))
+test = hparray([1,2,3,4,5])
+test2 = hparray([1,2,3,4,5])
