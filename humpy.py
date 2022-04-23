@@ -1,5 +1,8 @@
 from enum import Enum
 import copy
+import warnings
+
+inf = float('inf')
 
 class hparrayiter:
     def __init__(self, array):
@@ -44,6 +47,19 @@ class hparray:
                         else:
                             self.array[idx] = i
         self.ndim = len(self.shape)
+
+    def __setitem(self,item,value):
+        assert type(item) is int
+        assert item >= 0 and item < self.shape[0]
+        if isinstance(self.array[item],hparray):
+            assert isinstance(value,hparray)
+            assert value.shape == self.array[item].shape
+            self.array[item] = value
+        else:
+            assert not isinstance(value,hparray)
+            if self.type != None:
+                value = self.type(value)
+            self.array[item] = value
 
     def __getitem__(self, i):
         if isinstance(i,slice):
@@ -168,13 +184,245 @@ class hparray:
                     out.array[i].__add__(other)
         return out
 
+    def __sub__(self,other):
+        out = copy.deepcopy(self)
+        if isinstance(other,hparray):
+            if len(other.shape) == 1 and other.shape[0] == 1:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        out.array[i] -= other.array[0]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__sub__(other)
+            elif other.shape == out.shape:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        out.array[i] -= other.array[i]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__sub__(other.array[i])
+            else:
+                if len(other.shape) == len(out.shape):
+                    raise Exception("shape error")
+                for i in range(other.shape[0]):
+                    if isinstance(out.array[i],hparray):
+                        out.array[i].__sub__(other.array[i])
+                    else:
+                        if isinstance(other.array[i],hparray):
+                            for j in other.array[i]:
+                                out.array[i] -= j
+                        else:
+                            out.array[i] -= other.array[i]
+        else:
+            if len(out.shape) == 1:
+                for i in range(out.shape[0]):
+                    out.array[i] -= other
+            else:
+                for i in range(out.shape[0]):
+                    out.array[i].__sub__(other)
+        return out
+
+    def __mul__(self,other):
+        out = copy.deepcopy(self)
+        if isinstance(other,hparray):
+            if len(other.shape) == 1 and other.shape[0] == 1:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        out.array[i] *= other.array[0]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__mul__(other)
+            elif other.shape == out.shape:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        out.array[i] *= other.array[i]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__mul__(other.array[i])
+            else:
+                if len(other.shape) == len(out.shape):
+                    raise Exception("shape error")
+                for i in range(other.shape[0]):
+                    if isinstance(out.array[i],hparray):
+                        out.array[i].__mul__(other.array[i])
+                    else:
+                        if isinstance(other.array[i],hparray):
+                            for j in other.array[i]:
+                                out.array[i] *= j
+                        else:
+                            out.array[i] *= other.array[i]
+        else:
+            if len(out.shape) == 1:
+                for i in range(out.shape[0]):
+                    out.array[i] *= other
+            else:
+                for i in range(out.shape[0]):
+                    out.array[i].__mul__(other)
+        return out
+
+    def __truediv__(self,other):
+        out = copy.deepcopy(self)
+        if isinstance(other,hparray):
+            if len(other.shape) == 1 and other.shape[0] == 1:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        if other.array[0] == 0:
+                            warnings.warn("Div0", RuntimeWarning)
+                            out.array[i] = inf
+                        else:
+                            out.array[i] /= other.array[0]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__truediv__(other)
+            elif other.shape == out.shape:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        if other.array[i] == 0:
+                            warnings.warn("Div0", RuntimeWarning)
+                            out.array[i] = inf
+                        else:
+                            out.array[i] /= other.array[i]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__truediv__(other.array[i])
+            else:
+                if len(other.shape) == len(out.shape):
+                    raise Exception("shape error")
+                for i in range(other.shape[0]):
+                    if isinstance(out.array[i],hparray):
+                        out.array[i].__truediv__(other.array[i])
+                    else:
+                        if isinstance(other.array[i],hparray):
+                            for j in other.array[i]:
+                                if j == 0:
+                                    warnings.warn("Div0", RuntimeWarning)
+                                    out.array[i] = inf
+                                else:
+                                    out.array[i] /= j
+                        else:
+                            if other.array[i] == 0:
+                                warnings.warn("Div0", RuntimeWarning)
+                                out.array[i] = inf
+                            else:
+                                out.array[i] /= other.array[i]
+        else:
+            if len(out.shape) == 1:
+                for i in range(out.shape[0]):
+                    if other == 0:
+                        warnings.warn("Div0", RuntimeWarning)
+                        out.array[i] = inf
+                    else:
+                        out.array[i] /= other
+            else:
+                for i in range(out.shape[0]):
+                    out.array[i].__truediv__(other)
+        return out
+
+    def __pow__(self,other):
+        out = copy.deepcopy(self)
+        if isinstance(other,hparray):
+            if len(other.shape) == 1 and other.shape[0] == 1:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        out.array[i] **= other.array[0]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__pow__(other)
+            elif other.shape == out.shape:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        out.array[i] **= other.array[i]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__pow__(other.array[i])
+            else:
+                if len(other.shape) == len(out.shape):
+                    raise Exception("shape error")
+                for i in range(other.shape[0]):
+                    if isinstance(out.array[i],hparray):
+                        out.array[i].__pow__(other.array[i])
+                    else:
+                        if isinstance(other.array[i],hparray):
+                            for j in other.array[i]:
+                                out.array[i] **= j
+                        else:
+                            out.array[i] **= other.array[i]
+        else:
+            if len(out.shape) == 1:
+                for i in range(out.shape[0]):
+                    out.array[i] **= other
+            else:
+                for i in range(out.shape[0]):
+                    out.array[i].__pow__(other)
+        return out
+
+    def __floordiv__(self,other):
+        out = copy.deepcopy(self)
+        if isinstance(other,hparray):
+            if len(other.shape) == 1 and other.shape[0] == 1:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        if other.array[0] == 0:
+                            warnings.warn("Div0", RuntimeWarning)
+                            out.array[i] = inf
+                        else:
+                            out.array[i] //= other.array[0]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__floordiv__(other)
+            elif other.shape == out.shape:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        if other.array[i] == 0:
+                            warnings.warn("Div0", RuntimeWarning)
+                            out.array[i] = inf
+                        else:
+                            out.array[i] //= other.array[i]
+                else:
+                    for i in range(out.shape[0]):
+                        out.array[i].__floordiv__(other.array[i])
+            else:
+                if len(other.shape) == len(out.shape):
+                    raise Exception("shape error")
+                for i in range(other.shape[0]):
+                    if isinstance(out.array[i],hparray):
+                        out.array[i].__floordiv__(other.array[i])
+                    else:
+                        if isinstance(other.array[i],hparray):
+                            for j in other.array[i]:
+                                if j == 0:
+                                    warnings.warn("Div0", RuntimeWarning)
+                                    out.array[i] = inf
+                                else:
+                                    out.array[i] //= j
+                        else:
+                            if other.array[i] == 0:
+                                warnings.warn("Div0", RuntimeWarning)
+                                out.array[i] = inf
+                            else:
+                                out.array[i] //= other.array[i]
+        else:
+            if len(out.shape) == 1:
+                for i in range(out.shape[0]):
+                    if other == 0:
+                        warnings.warn("Div0", RuntimeWarning)
+                        out.array[i] = inf
+                    else:
+                        out.array[i] //= other
+            else:
+                for i in range(out.shape[0]):
+                    out.array[i].__floordiv__(other)
+        return out
 
 def array(object,dtype=None):
     return hparray(array=object,this_type=dtype)
 
-test = array([1,1,1,1])
-yeet = array([[1,0,0,0],[1,1,0,0],[1,1,1,0],[1,1,1,1]])
+def sqrt(x):
+    return x ** (1/2)
+
+test = array([10,10,10,10],dtype=int)
+yeet = array([1,1,10,100],dtype=int)
 print(yeet.shape)
 print(test.shape)
-test2 = test + yeet
+test2 = sqrt(test)
 print(test2)
