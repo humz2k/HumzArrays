@@ -1,3 +1,6 @@
+from enum import Enum
+import copy
+
 class hparrayiter:
     def __init__(self, array):
         self._array = array
@@ -12,8 +15,9 @@ class hparrayiter:
         raise StopIteration
 
 class hparray:
-    def __init__(self,array=None,shape=None,override=False):
+    def __init__(self,array=None,shape=None,override=False,this_type=None):
         assert array != None or shape != None
+        self.type = this_type
         if override:
             self.array = array
             self.shape = shape
@@ -33,9 +37,12 @@ class hparray:
                 for idx in range(self.shape[0]):
                     i = array[idx]
                     if isinstance(i,list):
-                        self.array[idx] = hparray(array=i,shape=self.shape[1:])
+                        self.array[idx] = hparray(array=i,shape=self.shape[1:],this_type=self.type)
                     else:
-                        self.array[idx] = i
+                        if self.type != None:
+                            self.array[idx] = self.type(i)
+                        else:
+                            self.array[idx] = i
         self.ndim = len(self.shape)
 
     def __getitem__(self, i):
@@ -63,7 +70,7 @@ class hparray:
             for idx in range(start,stop,step):
                 out[count] = self.array[idx]
                 count += 1
-            return hparray(array = out,shape = new_shape,override=True)
+            return hparray(array = out,shape = new_shape,this_type = self.type,override=True)
         elif isinstance(i,tuple):
             if any(isinstance(x,slice) for x in i):
                 current = self
@@ -74,8 +81,6 @@ class hparray:
                         if isinstance(j,slice):
                             sliced = True
                     else:
-                        # THIS IS STUPID CAUSE IT USES LISTS
-                        # PLEASE FIX IDIOT
                         if j == None:
                             j = 0
                         temp = current
@@ -87,7 +92,7 @@ class hparray:
                                 for i in range(temp.shape[0]):
                                     out.append(traverse(temp.array[i]))
                                 return out
-                        return hparray(array = traverse(temp))
+                        return hparray(array = traverse(temp),this_type = self.type)
                 return current
             else:
                 new_shape = (len(i),) + self.shape[1:]
@@ -96,7 +101,7 @@ class hparray:
                 for idx in i:
                     out[count] = self.array[idx]
                     count += 1
-                return hparray(array = out,shape=new_shape,override=True)
+                return hparray(array = out,shape=new_shape,this_type = self.type,override=True)
         else:
             if i < 0:
                 i += self.shape[0]
@@ -126,35 +131,50 @@ class hparray:
         return out + "]"
 
     def __add__(self,other):
+        out = copy.deepcopy(self)
         if isinstance(other,hparray):
             if len(other.shape) == 1 and other.shape[0] == 1:
-                if len(self.shape) == 1:
-                    for i in range(self.shape[0]):
-                        self.array[i] += other.array[0]
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        out.array[i] += other.array[0]
                 else:
-                    for i in range(self.shape[0]):
-                        self.array[i].__add__(other)
-            elif other.shape == self.shape:
-                if len(self.shape) == 1:
-                    for i in range(self.shape[0]):
-                        self.array[i] += other.array[i]
+                    for i in range(out.shape[0]):
+                        out.array[i].__add__(other)
+            elif other.shape == out.shape:
+                if len(out.shape) == 1:
+                    for i in range(out.shape[0]):
+                        out.array[i] += other.array[i]
                 else:
-                    for i in range(self.shape[0]):
-                        self.array[i].__add__(other.array[i])
+                    for i in range(out.shape[0]):
+                        out.array[i].__add__(other.array[i])
             else:
-                if len(other.shape) == len(self.shape):
+                if len(other.shape) == len(out.shape):
                     raise Exception("shape error")
                 for i in range(other.shape[0]):
-                    self.__add__(other.array[i])
+                    if isinstance(out.array[i],hparray):
+                        out.array[i].__add__(other.array[i])
+                    else:
+                        if isinstance(other.array[i],hparray):
+                            for j in other.array[i]:
+                                out.array[i] += j
+                        else:
+                            out.array[i] += other.array[i]
         else:
-            if len(self.shape) == 1:
-                for i in range(self.shape[0]):
-                    self.array[i] += other
+            if len(out.shape) == 1:
+                for i in range(out.shape[0]):
+                    out.array[i] += other
             else:
-                for i in range(self.shape[0]):
-                    self.array[i].__add__(other)
-        return self
+                for i in range(out.shape[0]):
+                    out.array[i].__add__(other)
+        return out
 
 
-test = hparray([1,2,3,4,5])
-test2 = hparray([1,2,3,4,5])
+def array(object,dtype=None):
+    return hparray(array=object,this_type=dtype)
+
+test = array([1,1,1,1])
+yeet = array([[1,0,0,0],[1,1,0,0],[1,1,1,0],[1,1,1,1]])
+print(yeet.shape)
+print(test.shape)
+test2 = test + yeet
+print(test2)
